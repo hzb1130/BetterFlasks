@@ -104,6 +104,29 @@ namespace BetterFlasks
             return WriteMember(supply, "m_VolumeInLiters", volume);
         }
 
+        internal static float CalculateMixedHeatPercent(
+            ItemLiquidVolume currentVolume,
+            float currentHeatPercent,
+            ItemLiquidVolume addedVolume)
+        {
+            float currentLiters = Mathf.Max(
+                0f,
+                currentVolume / ItemLiquidVolume.Liter);
+            float addedLiters = Mathf.Max(
+                0f,
+                addedVolume / ItemLiquidVolume.Liter);
+            float totalLiters = currentLiters + addedLiters;
+
+            if (totalLiters <= 0f)
+                return 0f;
+
+            float currentHeat = Mathf.Clamp(currentHeatPercent, 0f, 100f);
+            return Mathf.Clamp(
+                currentLiters * currentHeat / totalLiters,
+                0f,
+                100f);
+        }
+
         private static bool SaveDataMentionsWater(
             InsulatedFlask.SaveData saveData)
         {
@@ -660,6 +683,10 @@ namespace BetterFlasks
             if (requested <= ItemLiquidVolume.Zero)
                 return false;
 
+            float mixedHeatPercent = CalculateMixedHeatPercent(
+                current,
+                flask.GetHeatPercent(),
+                requested);
             ItemLiquidVolume newVolume = current + requested;
             GearItem content = EnsureWaterContent(flask, sourceItem, newVolume);
             if (content == null)
@@ -667,7 +694,7 @@ namespace BetterFlasks
 
             flask.m_LiquidType = potable;
             flask.m_VolumeLitres = newVolume;
-            flask.m_HeatPercent = 0f;
+            flask.m_HeatPercent = mixedHeatPercent;
             SetWaterVolume(content.m_WaterSupply, newVolume);
 
             player.RemoveWater(sourceItem.m_WaterSupply, requested);
